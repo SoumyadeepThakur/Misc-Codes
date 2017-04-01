@@ -259,7 +259,7 @@ void library::load_library() {
 	count=0;
 	cout << "Reading issues" << endl;
 	issue is;
-	while (!f_is.eof()) { // load issues from file to program
+	while (f_is!=NULL && !f_is.eof()) { // load issues from file to program
 		f_is >> is.issue_no;
 		f_is >> is.returned;
 		f_is >> is.issue_date;

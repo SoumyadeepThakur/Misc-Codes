@@ -38,6 +38,7 @@ class assembler
 	map <string, std::vector<int> > sym_tab ;
 	void parse_file();
 	int get_data_location(string,string,string);
+	unsigned char process_byte(string);
 	public:
 	assembler(string file):ip_file(file)
 	{
@@ -50,6 +51,26 @@ class assembler
 	void load_memory();
 	void assemble();
 };
+unsigned char assembler::process_byte(string byte_string)
+{
+	// byte string should be of the form F'XX' where F is the format (C,X,B) and XX is the value
+	// e.g C'Z'; X'A2'; B'00011011'
+	char beg_char = byte_string.at(0);
+	char byte;
+	try
+	{
+		switch (beg_char)
+		{
+			case 'C': byte = byte_string.at() // edit here
+		}
+	}
+	catch ( ... )
+	{
+		cout << "Invalid byte format" << endl;
+		return 0;
+	}
+	return byte;
+}
 void assembler::parse_file()
 {
 	fstream in(ip_file,ios::in);
@@ -106,6 +127,11 @@ void assembler::parse_file()
 				}
 			}
 		}
+		else if (sym_tab.find(tokens[0]) == sym_tab.end()) // if not an operator and not an existing symbol
+		{
+			sym_tab[tokens[0]].push_back(code);
+			
+		}
 		lineno++;
 	}
 	for (int i=code_start; i<code_start+18; i++) cout << (int)memory[i] << " ";
@@ -136,14 +162,14 @@ int assembler::get_data_location(string name, string st_type="", string val="")
 		code+=bytes;
 		return loc;
 	}
-	//else if (!st_type.compare("BYTE"))
-	//{
-	//	cout << "byte" << endl;
-	//	
-	//	int loc = code;
-	//	code++;
-	//	return loc;
-	//}
+	else if (!st_type.compare("BYTE"))
+	{
+		cout << "byte" << endl;
+		unsigned char byte = byte_format(val);
+		int loc = code;
+		code++;
+		return loc;
+	}
 }
 void assembler::load_memory()
 {

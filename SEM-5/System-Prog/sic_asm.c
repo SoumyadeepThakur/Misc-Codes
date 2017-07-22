@@ -7,7 +7,7 @@
 #include <cstdio>
 #include <random>
 #include <iomanip>
-#define MEMORY_SIZE 8192
+#define MEMORY_SIZE 32768
 using namespace std;
 
 unsigned char memory[MEMORY_SIZE]; // model for the memory
@@ -22,25 +22,32 @@ void operator_table()
 	op_tab["LDA"] = "00";
 	op_tab["LDX"] = "04";
 	op_tab["STA"] = "0C";
+	op_tab["STX"] = "10";
 	op_tab["COMP"] = "28";
 	op_tab["TIX"] = "2C";
-    op_tab["RSUB"] = "10";
-    op_tab["JSUB"] = "11";
-    op_tab["MOV"] = "FF";
+    op_tab["RSUB"] = "4C";
+    op_tab["JSUB"] = "48";
+	op_tab["JEQ"] = "30";
+	op_tab["JGT"] = "34";
+	op_tab["JLT"] = "38";
 }
-
+bool is_branch_instr(string instr)
+{
+	return (!instr.compare("JSUB") || !instr.compare("RSUB")  || !instr.compare("JEQ") || !instr.compare("JLT") || !instr.compare("JGT"));
+}
 class assembler
 {
 	int ACC, X, L, PC;
-	string ip_file;
-	int code_start, data_start;
-	int data_bytes, code;
-	map <string, std::vector<int> > sym_tab ;
+	string ip_file, op_file;
+	int code_start, code;
+	map <string, std::vector<int> > sym_tab ;;
+	map <string, int> label_table;
 	void parse_file();
 	int get_data_location(string,string,string);
-	unsigned char process_byte(string);
+	unsigned char *byte_format(string);
+	void dump_code();
 	public:
-	assembler(string file):ip_file(file)
+	assembler(string infile, string outfile):ip_file(infile),op_file(outfile)
 	{
 		ACC=X=L=PC=0;
 		code=0;
@@ -51,25 +58,40 @@ class assembler
 	void load_memory();
 	void assemble();
 };
-unsigned char assembler::process_byte(string byte_string)
+unsigned char *assembler::byte_format(string byte_string)
 {
 	// byte string should be of the form F'XX' where F is the format (C,X,B) and XX is the value
 	// e.g C'Z'; X'A2'; B'00011011'
 	char beg_char = byte_string.at(0);
-	char byte;
+	unsigned char *bytearr;
+	int len = byte_string.size();
+	string buf = byte_string.substr(2,len-1); // extract the value part
 	try
 	{
 		switch (beg_char)
 		{
-			case 'C': byte = byte_string.at() // edit here
+			case 'C': bytearr = new unsigned char[len-3];
+					  for (int i = 0; i<len-3; i++)
+					  {
+						  bytearr[i] = (unsigned char)(buf[i]);
+						  memory[code++] = bytearr[i];
+					  }
+					  //code+=(len-3);
+					  break;
+			case 'X': bytearr = new unsigned char[(len-3)/2];
+					  for (int i=0; i<len-3; i+=2)
+					  {
+						  bytearr[i] = (unsigned char)(std::stoi(buf.substr(i,i+2)),nullptr,16);
+						  memory[code++] = bytearr[i];
+					  }
 		}
 	}
 	catch ( ... )
 	{
 		cout << "Invalid byte format" << endl;
-		return 0;
+		return NULL;
 	}
-	return byte;
+	return bytearr;
 }
 void assembler::parse_file()
 {
@@ -104,8 +126,18 @@ void assembler::parse_file()
 			memory[code++] = std::stoi(op_tab.at(tokens[0]),nullptr,16);
 			printf ("hi%02x\n",memory[code-1]);
 			// in SIC no immediate addressing
-			sym_tab[tokens[1]].push_back(code++);
-			code++;
+			if (is_branch_instr(tokens[0]))
+			{
+				int jmploc = label_table[tokens[1]];
+				memory[code++] = (jmploc & 255);
+				memory[code++] = (jmploc >> 8);
+			}
+			else
+			{
+				sym_tab[tokens[1]].push_back(code++);
+				code++;
+			}
+
 			//sym_tab[tokens[1]].push_back(code++);
 			for (int i=0; i<sym_tab[tokens[1]].size(); i++ ) cout << sym_tab[tokens[1]][i] << "-";
 		}
@@ -128,14 +160,34 @@ void assembler::parse_file()
 			}
 		}
 		else if (sym_tab.find(tokens[0]) == sym_tab.end()) // if not an operator and not an existing symbol
-		{
-			sym_tab[tokens[0]].push_back(code);
-			
+		{   // must be a label
+			label_table[tokens[0]] = code;
+			if (op_tab.find(tokens[1]) == op_tab.end()) // not an operator
+			{
+				cout << "Invalid format" << endl;
+			}
+			else
+			{
+				if (is_branch_instr(tokens[1]))
+				{
+					int jmploc = label_table[tokens[2]];
+					memory[code++] = (jmploc & 255);
+					memory[code++] = (jmploc >> 8);
+				}
+				else
+				{
+					memory[code++] = std::stoi(op_tab.at(tokens[1]),nullptr,16);
+					sym_tab[tokens[2]].push_back(code++);
+					code++;
+				}
+			}
+
 		}
 		lineno++;
 	}
 	for (int i=code_start; i<code_start+18; i++) cout << (int)memory[i] << " ";
 	in.close();
+
 }
 int assembler::get_data_location(string name, string st_type="", string val="")
 { // allocate the variable to somewhere in memory
@@ -165,11 +217,22 @@ int assembler::get_data_location(string name, string st_type="", string val="")
 	else if (!st_type.compare("BYTE"))
 	{
 		cout << "byte" << endl;
-		unsigned char byte = byte_format(val);
 		int loc = code;
-		code++;
+		unsigned char *bytes = byte_format(val);
+
+
 		return loc;
 	}
+}
+void assembler::dump_code()
+{
+	fstream outf(op_file,ios::out);
+	outf << "H" << std::hex << std::hex << code_start << std::hex << (code-code_start) << endl;
+	for (int i=code_start; i<code; i++)
+	{
+		outf << std::setw(2) << std::setfill('0') << std::hex << (int)(memory[i]) << endl;
+	}
+	outf.close();
 }
 void assembler::load_memory()
 {
@@ -179,15 +242,17 @@ void assembler::clear_memory()
 {
 	for (int i=0; i<MEMORY_SIZE; i++) memory[i]=0xFF;
 }
-void assembler::assemble() 
+void assembler::assemble()
 {
 	parse_file();
+	dump_code();
 }
 
 int main(int argc, char const *argv[])
 {
 	string filename = argv[1];
-	assembler asmb(filename);
+	string dump = argv[2];
+	assembler asmb(filename,dump);
 	asmb.assemble();
 	return 0;
 }

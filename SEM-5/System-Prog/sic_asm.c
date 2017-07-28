@@ -7,12 +7,12 @@
 #include <cstdio>
 #include <random>
 #include <iomanip>
-#define MEMORY_SIZE 32768
+#define MEMORY_SIZE 32
 using namespace std;
 
 unsigned char memory[MEMORY_SIZE]; // model for the memory
 map <string, string> op_tab;
-
+void execute_code(string);
 void operator_table()
 {
 	op_tab["ADD"] = "18";
@@ -37,9 +37,8 @@ bool is_branch_instr(string instr)
 }
 class assembler
 {
-	int ACC, X, L, PC;
 	string ip_file, op_file;
-	int code_start, code;
+	int code_start, code, instr_end;
 	map <string, std::vector<int> > sym_tab ;;
 	map <string, int> label_table;
 	void parse_file();
@@ -49,8 +48,10 @@ class assembler
 	public:
 	assembler(string infile, string outfile):ip_file(infile),op_file(outfile)
 	{
-		ACC=X=L=PC=0;
+		//ACC=X=L=PC=0;
 		code=0;
+		code_start=0;
+		instr_end=0;
 		operator_table();
 		clear_memory();
 	}
@@ -143,7 +144,10 @@ void assembler::parse_file()
 		}
 		else if (sym_tab.find(tokens[0]) != sym_tab.end()) // if storage variable
 		{
-
+			if (instr_end==0) {
+				instr_end=code;
+				cout << "CODE: " << code;
+			}
 			int loc;
 			if (op_tab.find(tokens[0]) == op_tab.end())
 			{
@@ -227,7 +231,7 @@ int assembler::get_data_location(string name, string st_type="", string val="")
 void assembler::dump_code()
 {
 	fstream outf(op_file,ios::out);
-	outf << "H" << std::hex << std::hex << code_start << std::hex << (code-code_start) << endl;
+	outf << "H" << std::setw(4) << std::setfill('0') << std::hex << code_start << std::setw(4) << std::setfill('0') << std::hex << (instr_end - code_start) << std::setw(4) << std::setfill('0') << std::hex << (code-code_start) << endl;
 	for (int i=code_start; i<code; i++)
 	{
 		outf << std::setw(2) << std::setfill('0') << std::hex << (int)(memory[i]) << endl;
@@ -236,23 +240,126 @@ void assembler::dump_code()
 }
 void assembler::load_memory()
 {
-
+	
 }
 void assembler::clear_memory()
 {
-	for (int i=0; i<MEMORY_SIZE; i++) memory[i]=0xFF;
+	cout << "CLEAR" << endl;
+	for (int i=0; i<MEMORY_SIZE; i++) memory[i]=255;
 }
 void assembler::assemble()
 {
 	parse_file();
 	dump_code();
 }
-
+void execute_code(string codefile)
+{
+	int ACC=0, X=0, L=0, PC=0; // SW=0;
+	int CC=0; // replace with SW
+	fstream cdf(codefile,ios::in);
+	string head;
+	cdf >> head;
+	cout << head << endl;
+	cout << head.substr(1,4) << endl;
+	int start = std::stoi(head.substr(1,4),nullptr,16);
+	int instr_size = std::stoi(head.substr(5,4),nullptr,16);
+	int code_size = std::stoi(head.substr(9,4),nullptr,16); 
+	cout << start << "," << instr_size << "," << code_size << endl;
+	for (int i=start; i<start+code_size+5; i++) cout << (int)memory[i] << " ";
+	cout << endl;
+	for (PC=start; PC<start+instr_size;)
+	{
+		// do exec here
+		int code = memory[PC];
+		cout << "Code: " << code << "	";
+		int loc, val;
+		switch(code)
+		{
+			case 0: //LDA
+					loc = memory[PC+1] + (int)(memory[PC+2] << 8);
+					val = memory[loc] + (int)(memory[loc+1] << 8) + (int)(memory[loc+2] << 16);
+					ACC = val;
+					cout << "0" << "," << loc << "," << val << endl;
+					break;
+			case 4: //LDX
+					loc = memory[PC+1] + (int)(memory[PC+2] << 8);
+					val = memory[loc] + (int)(memory[loc+1] << 8) + (int)(memory[loc+2] << 16);
+					X = val;
+					break;
+			case 12: //STA
+					 loc = memory[PC+1] + (int)(memory[PC+2] << 8);
+					 memory[loc] = (ACC & 255);
+					 memory[loc+1] = ((ACC & 65280) >> 8);
+					 memory[loc+2] = (ACC >> 16);
+					 break;
+			case 16: //STX
+					 loc = memory[PC+1] + (int)(memory[PC+2] << 8);
+					 memory[loc] = (X & 255);
+					 memory[loc+1] = ((X & 65280) >> 8);
+					 memory[loc+2] = (X >> 16);
+					 break;
+			case 24: //ADD
+					 loc = memory[PC+1] + (int)(memory[PC+2] << 8);
+					 val = memory[loc] + (int)(memory[loc+1] << 8) + (int)(memory[loc+2] << 16);
+					 ACC += val;
+					 if (ACC>16777215)
+					 {
+					 	//status word will show carry
+					 	ACC = (ACC & 16777215);
+					 }
+					 break;
+			case 28: //SUB
+					 loc = memory[PC+1] + (int)(memory[PC+2] << 8);
+					 val = memory[loc] + (int)(memory[loc+1] << 8) + (int)(memory[loc+2] << 16);
+					 ACC -= val;
+					 break;
+			case 40: //COMP
+					 loc = memory[PC+1] + (int)(memory[PC+2] << 8);
+					 val = memory[loc] + (int)(memory[loc+1] << 8) + (int)(memory[loc+2] << 16);
+					 if (val == ACC) CC = 0;
+					 else if (ACC > val) CC = 1;
+					 else CC = 2;
+					 break;
+			case 48: //JEQ
+					 if (CC==0)
+					 {
+					 	loc = memory[PC+1] + (int)(memory[PC+2] << 8);
+					 	PC = loc-3;
+					 }
+					 break;
+			case 52: //JGT
+					 if (CC==1)
+					 {
+					 	loc = memory[PC+1] + (int)(memory[PC+2] << 8);
+					 	PC = loc-3;
+					 }
+					 break;
+			case 56: //JLT
+					 if (CC==2)
+					 {
+					 	loc = memory[PC+1] + (int)(memory[PC+2] << 8);
+					 	PC = loc-3;
+					 }
+					 break;
+		}
+		PC+=3;	
+	}
+	for (int i=start; i<start+code_size+5; i++) cout << (int)memory[i] << " ";
+	cout << endl;
+	cdf.close();
+	cout << ACC << "-" << X << "-" << L << "-" << PC << endl;
+}
 int main(int argc, char const *argv[])
 {
 	string filename = argv[1];
 	string dump = argv[2];
+	//string filename, dump;
+	//cout << "Enter input file: ";
+	//cin >> filename;
+	//cout << "Enter output file: ";
+	//cin >> dump;
 	assembler asmb(filename,dump);
 	asmb.assemble();
+	execute_code(dump);
 	return 0;
 }

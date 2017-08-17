@@ -18,6 +18,8 @@ DATE OF CREATION: 17 AUG 2017
 
 #endif
 
+#endif
+
 /*util function to check for branches */
 bool is_branch_instr(std::string);
 

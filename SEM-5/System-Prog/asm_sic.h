@@ -43,5 +43,3 @@ class assembler
 	void assemble();
 
 };
-
-#endif

@@ -92,13 +92,8 @@ void assembler::parse_file()
 		istringstream iss(line);
 		std::string tokens[3];
 		iss >> tokens[0] >> tokens[1] >> tokens[2];
-		cout << tokens[0] << "," << tokens[1] << "," << tokens[2] << endl;
-		cout << (label_table.find("SWAP") != label_table.end()) << "--oo" << endl;
-		//if (!tokens[0].compare("") && !tokens[1].compare("") && !tokens[2].compare(""))
-		//{
-		//	cout << "DANGER" << endl;
-		//	break;
-		//}
+		//cout << tokens[0] << "," << tokens[1] << "," << tokens[2] << endl;
+		//cout << (label_table.find("SWAP") != label_table.end()) << "--oo" << endl;
 		if (lineno==0 && !(tokens[0].compare("START")))
 		{
 			code_start = std::stoi (tokens[1],nullptr,16);
@@ -107,7 +102,7 @@ void assembler::parse_file()
 		else if (op_tab.find(tokens[0]) != op_tab.end())
 		{
 			// operator encountered			
-			cout << "--this is op" << endl;
+		//	cout << "--this is op" << endl;
 
 			memory[code++] = std::stoi(op_tab.at(tokens[0]),nullptr,16);
 
@@ -119,7 +114,7 @@ void assembler::parse_file()
 			}
 			else if (is_branch_instr(tokens[0]))
 			{
-				cout << "--this is branch" << endl;
+				//cout << "--this is branch" << endl;
 				if (label_table.find(tokens[1]) != label_table.end()) // previously occured
 				{
 					int jmploc = label_table[tokens[1]];
@@ -128,7 +123,7 @@ void assembler::parse_file()
 				}
 				else // not occured before. may be jump addr
 				{
-					cout << "where occurs: " << code << endl;
+					//cout << "where occurs: " << code << endl;
 					label_table[tokens[1]] = code++;
 					code++;
 					cout << label_table[tokens[1]] << "," << tokens[1] << endl;
@@ -151,7 +146,7 @@ void assembler::parse_file()
 					}
 				}
 				sym_tab[tokens[1]].push_back(code++);
-				cout << "pushed back" << endl;
+				//cout << "pushed back" << endl;
 				code++;
 			}
 
@@ -159,9 +154,9 @@ void assembler::parse_file()
 		}
 		else if (sym_tab.find(tokens[0]) != sym_tab.end()) // if storage variable
 		{
-			cout << "--this is var" << endl;
-			for (auto ele : sym_tab[tokens[0]]) cout << ele << ",";
-			cout << "shown" << endl;
+			//cout << "--this is var" << endl;
+			//for (auto ele : sym_tab[tokens[0]]) cout << ele << ",";
+			//cout << "shown" << endl;
 			if (instr_end==0) {
 				instr_end=code;
 				//cout << "CODE: " << code;
@@ -183,10 +178,10 @@ void assembler::parse_file()
 		}
 		else if (sym_tab.find(tokens[0]) == sym_tab.end()) // if not an operator and not an existing symbol
 		{   // must be a label
-			cout << "--this is label" << endl;
+			//cout << "--this is label" << endl;
 			if (label_table.find(tokens[0]) != label_table.end())
 			{
-				cout << "found here: " << code << "," << tokens[0] << "," << label_table[tokens[0]] << endl;
+				//cout << "found here: " << code << "," << tokens[0] << "," << label_table[tokens[0]] << endl;
 				memory[label_table[tokens[0]]] = (code & 255);
 				memory[label_table[tokens[0]]+1] = ((code >> 8) & 255);
 			}
@@ -240,7 +235,7 @@ void assembler::parse_file()
 		}
 		lineno++;
 	}
-	cout << "hi" << code_start << "," << code << (int)memory[code_start+1] << endl;
+	//cout << "hi" << code_start << "," << code << (int)memory[code_start+1] << endl;
 	for (int l=code_start; l<code; l++) cout << (int)memory[l] << " ";
 	in.close();
 

@@ -92,6 +92,13 @@ void assembler::parse_file()
 		istringstream iss(line);
 		std::string tokens[3];
 		iss >> tokens[0] >> tokens[1] >> tokens[2];
+		cout << tokens[0] << "," << tokens[1] << "," << tokens[2] << endl;
+		cout << (label_table.find("SWAP") != label_table.end()) << "--oo" << endl;
+		//if (!tokens[0].compare("") && !tokens[1].compare("") && !tokens[2].compare(""))
+		//{
+		//	cout << "DANGER" << endl;
+		//	break;
+		//}
 		if (lineno==0 && !(tokens[0].compare("START")))
 		{
 			code_start = std::stoi (tokens[1],nullptr,16);
@@ -99,15 +106,33 @@ void assembler::parse_file()
 		}
 		else if (op_tab.find(tokens[0]) != op_tab.end())
 		{
-			// operator encountered
+			// operator encountered			
+			cout << "--this is op" << endl;
+
 			memory[code++] = std::stoi(op_tab.at(tokens[0]),nullptr,16);
+
 			//printf ("hi%02x\n",memory[code-1]);
 			// in SIC no immediate addressing
-			if (is_branch_instr(tokens[0]))
+			if (!tokens[0].compare("RSUB"))
 			{
-				int jmploc = label_table[tokens[1]];
-				memory[code++] = (jmploc & 255);
-				memory[code++] = (jmploc >> 8);
+				memory[code++] = 0; memory[code++] = 0;
+			}
+			else if (is_branch_instr(tokens[0]))
+			{
+				cout << "--this is branch" << endl;
+				if (label_table.find(tokens[1]) != label_table.end()) // previously occured
+				{
+					int jmploc = label_table[tokens[1]];
+					memory[code++] = (jmploc & 255);
+					memory[code++] = (jmploc >> 8);
+				}
+				else // not occured before. may be jump addr
+				{
+					cout << "where occurs: " << code << endl;
+					label_table[tokens[1]] = code++;
+					code++;
+					cout << label_table[tokens[1]] << "," << tokens[1] << endl;
+				}
 			}
 			else
 			{
@@ -126,14 +151,17 @@ void assembler::parse_file()
 					}
 				}
 				sym_tab[tokens[1]].push_back(code++);
+				cout << "pushed back" << endl;
 				code++;
 			}
 
-			//sym_tab[tokens[1]].push_back(code++);
-			for (int i=0; i<sym_tab[tokens[1]].size(); i++ ) cout << sym_tab[tokens[1]][i] << "-";
+			//for (int i=0; i<sym_tab[tokens[1]].size(); i++ ) cout << sym_tab[tokens[1]][i] << "-";
 		}
 		else if (sym_tab.find(tokens[0]) != sym_tab.end()) // if storage variable
 		{
+			cout << "--this is var" << endl;
+			for (auto ele : sym_tab[tokens[0]]) cout << ele << ",";
+			cout << "shown" << endl;
 			if (instr_end==0) {
 				instr_end=code;
 				//cout << "CODE: " << code;
@@ -155,18 +183,41 @@ void assembler::parse_file()
 		}
 		else if (sym_tab.find(tokens[0]) == sym_tab.end()) // if not an operator and not an existing symbol
 		{   // must be a label
-			label_table[tokens[0]] = code;
+			cout << "--this is label" << endl;
+			if (label_table.find(tokens[0]) != label_table.end())
+			{
+				cout << "found here: " << code << "," << tokens[0] << "," << label_table[tokens[0]] << endl;
+				memory[label_table[tokens[0]]] = (code & 255);
+				memory[label_table[tokens[0]]+1] = ((code >> 8) & 255);
+			}
+			else
+			{
+				label_table[tokens[0]] = code;
+			}
 			if (op_tab.find(tokens[1]) == op_tab.end()) // not an operator
 			{
 				cout << "Invalid format" << endl;
 			}
 			else
 			{
-				if (is_branch_instr(tokens[1]))
+				if (!tokens[1].compare("RSUB"))
 				{
-					int jmploc = label_table[tokens[2]];
-					memory[code++] = (jmploc & 255);
-					memory[code++] = (jmploc >> 8);
+					memory[code++] = 0; memory[code++] = 0;
+				}
+				else if (is_branch_instr(tokens[1]))
+				{
+					if (label_table.find(tokens[2]) != label_table.end()) // previously occured
+					{
+						int jmploc = label_table[tokens[2]];
+						memory[code++] = (jmploc & 255);
+						memory[code++] = (jmploc >> 8);
+					}
+					else // not occured before. may be jump addr
+					{
+						label_table[tokens[2]] = code++;
+						code++;
+						//code += 2;
+					}
 				}
 				else
 				{
@@ -182,13 +233,15 @@ void assembler::parse_file()
 					//else memory[code+1] = 0;
 					sym_tab[tokens[2]].push_back(code++);
 					code++;
+					
 				}
 			}
 
 		}
 		lineno++;
 	}
-	//for (int i=code_start; i<code_start+18; i++) cout << (int)memory[i] << " ";
+	cout << "hi" << code_start << "," << code << (int)memory[code_start+1] << endl;
+	for (int l=code_start; l<code; l++) cout << (int)memory[l] << " ";
 	in.close();
 
 }
@@ -246,150 +299,3 @@ void assembler::assemble()
 	parse_file();
 	dump_code();
 }
-/*
-void execute_code(string codefile)
-{
-	int ACC=0, X=0, L=0, PC=0; // SW=0;
-	int CC=0; // replace with SW
-	std::fstream cdf(codefile,ios::in);
-	std::string head;
-	cdf >> head;
-	//cout << head << endl;
-	//cout << head.substr(1,4) << endl;
-	int start = std::stoi(head.substr(1,4),nullptr,16);
-	int instr_size = std::stoi(head.substr(5,4),nullptr,16);
-	int code_size = std::stoi(head.substr(9,4),nullptr,16); 
-	//cout << start << "," << instr_size << "," << code_size << endl;
-	//for (int i=start; i<start+code_size+5; i++) cout << (int)memory[i] << " ";
-	//cout << endl;
-	for (PC=start; PC<start+instr_size;)
-	{
-		// do exec here
-		int code = memory[PC];
-		//cout << "Code: " << code << "	";
-		int loc, val, high;
-		//cout << ACC << "-" << X << "-" << L << "-" << PC << endl;
-		switch(code)
-		{
-
-			case 0: //LDA
-					high = (int)(memory[PC+2]);
-					//cout << "high: " << high << endl;
-					if ((high & 128)) high = ((high & 127) << 8) + X;
-					else high = (high & 127) << 8;
-					loc = memory[PC+1] + high;
-					//cout << "0" << "," << loc << "," << val << endl;
-					val = memory[loc] + (int)(memory[loc+1] << 8) + (int)(memory[loc+2] << 16);
-					ACC = val;
-					//cout << "0" << "," << loc << "," << val << endl;
-					break;
-			case 4: //LDX
-					high = (int)(memory[PC+2]);
-					if ((high & 128)) high = ((high & 127) << 8) + X;
-					else high = (high & 127) << 8;
-					loc = memory[PC+1] + high;
-					val = memory[loc] + (int)(memory[loc+1] << 8) + (int)(memory[loc+2] << 16);
-					X = val;
-					break;
-			case 12: //STA
-					 high = (int)(memory[PC+2]);
-					 if ((high & 128)) high = ((high & 127) << 8) + X;
-					 else high = (high & 127) << 8;
-					 loc = memory[PC+1] + high;
-					 memory[loc] = (ACC & 255);
-					 memory[loc+1] = ((ACC & 65280) >> 8);
-					 memory[loc+2] = (ACC >> 16);
-					 break;
-			case 16: //STX
-					 high = (int)(memory[PC+2]);
-					 if ((high & 128)) high = ((high & 127) << 8) + X;
-					 else high = (high & 127) << 8;
-					 loc = memory[PC+1] + high;
-					 memory[loc] = (X & 255);
-					 memory[loc+1] = ((X & 65280) >> 8);
-					 memory[loc+2] = (X >> 16);
-					 break;
-			case 24: //ADD
-					 high = (int)(memory[PC+2]);
-					 if ((high & 128)) high = ((high & 127) << 8) + X;
-					 else high = (high & 127) << 8;
-					 loc = memory[PC+1] + high;
-					 val = memory[loc] + (int)(memory[loc+1] << 8) + (int)(memory[loc+2] << 16);
-					 ACC += val;
-					 ACC &= 16777215;
-					 break;
-			case 28: //SUB
-					 high = (int)(memory[PC+2]);
-					 if ((high & 128)) high = ((high & 127) << 8) + X;
-					 else high = (high & 127) << 8;
-					 loc = memory[PC+1] + high;
-					 val = memory[loc] + (int)(memory[loc+1] << 8) + (int)(memory[loc+2] << 16);
-					 ACC -= val;
-					 ACC &= 16777215;
-					 break;
-			case 32: //MUL
-					 high = (int)(memory[PC+2]);
-					 if ((high & 128)) high = ((high & 127) << 8) + X;
-					 else high = (high & 127) << 8;
-					 loc = memory[PC+1] + high;
-					 val = memory[loc] + (int)(memory[loc+1] << 8) + (int)(memory[loc+2] << 16);
-					 ACC *= val;
-					 ACC &= 16777215;
-					 break;
-			case 36: high = (int)(memory[PC+2]);
-					 if ((high & 128)) high = ((high & 127) << 8) + X;
-					 else high = (high & 127) << 8;
-					 loc = memory[PC+1] + high;
-					 val = memory[loc] + (int)(memory[loc+1] << 8) + (int)(memory[loc+2] << 16);
-					 ACC /= val;
-					 ACC &= 16777215;
-					 break;
-			
-			case 40: //COMP
-					 loc = memory[PC+1] + (int)(memory[PC+2] << 8);
-					 val = memory[loc] + (int)(memory[loc+1] << 8) + (int)(memory[loc+2] << 16);
-					 if (val == ACC) CC = 0;
-					 else if (ACC > val) CC = 1;
-					 else CC = 2;
-					 break;
-			case 48: //JEQ
-					 if (CC==0)
-					 {
-					 	loc = memory[PC+1] + (int)(memory[PC+2] << 8);
-					 	PC = loc-3;
-					 }
-					 break;
-			case 52: //JGT
-					 if (CC==1)
-					 {
-					 	loc = memory[PC+1] + (int)(memory[PC+2] << 8);
-					 	PC = loc-3;
-					 }
-					 break;
-			case 56: //JLT
-					 if (CC==2)
-					 {
-					 	loc = memory[PC+1] + (int)(memory[PC+2] << 8);
-					 	PC = loc-3;
-					 }
-					 break;
-		}
-		PC+=3;	
-	}
-	std::cout << "MEMORY: " << endl << "------------------------------------------------------------------------------------------" << endl;
-	for (int i=start; i<start+code_size+5; i++) cout << (int)memory[i] << " ";
-	cout << endl;
-	cdf.close();
-	std::cout << endl << "REGISTER STATUS: " << endl << "---------------------------------------------" << endl;
-	std::cout << "ACCUMULATOR: " << ACC << endl << "INDEX REGISTER: " << X << endl << "L REGISTER: " << L << endl << "PROGRAM COUNTER:" << PC << endl;
-}
-int main(int argc, char const *argv[])
-{
-	string filename = argv[1];
-	string dump = argv[2];
-	assembler asmb(filename,dump);
-	asmb.assemble();
-	execute_code(dump);
-	return 0;
-}
-*/

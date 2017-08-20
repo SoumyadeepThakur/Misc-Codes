@@ -19,6 +19,7 @@ void execute_code(std::string codefile)
 	int start = std::stoi(head.substr(1,4),nullptr,16);
 	int instr_size = std::stoi(head.substr(5,4),nullptr,16);
 	int code_size = std::stoi(head.substr(9,4),nullptr,16); 
+	int end = std::stoi(head.substr(13,4),nullptr,16); 
 	//cout << start << "," << instr_size << "," << code_size << endl;
 	//for (int i=start; i<start+code_size+5; i++) cout << (int)memory[i] << " ";
 	//cout << endl;
@@ -29,11 +30,11 @@ void execute_code(std::string codefile)
 		cdf >> byte;
 		memory[i] = std::stoi(byte,nullptr,16);
 	}
-	for (PC=start; PC<start+instr_size;)
+	for (PC=start; ;PC+=3)
 	{
 		// do exec here
 		int code = memory[PC];
-		//cout << "Code: " << code << "	";
+		//cout << "Code: " << code << "\t";
 		int loc, val, high;
 		//cout << ACC << "-" << X << "-" << L << "-" << PC << endl;
 		switch(code)
@@ -150,7 +151,8 @@ void execute_code(std::string codefile)
 					 break;
 
 		}
-		PC+=3;	
+		if (PC+3 == end) break;
+		//PC+=3;	
 	}
 	std::cout << "MEMORY: " << endl << "------------------------------------------------------------------------------------------" << endl;
 	for (int i=start; i<start+code_size+5; i++) cout << (int)memory[i] << " ";

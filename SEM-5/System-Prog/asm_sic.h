@@ -27,7 +27,7 @@ bool is_branch_instr(std::string);
 class assembler
 {
 	std::string ip_file, op_file;
-	int code_start, code, instr_end;
+	int code_start, code, instr_end, main_end;
 	std::map <std::string, std::vector<int> > sym_tab ;
 	std::map <std::string, int> label_table;
 

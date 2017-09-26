@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <fstream>
+#include <iomanip>
 #include "sicxe_exec.h"
 #define MEMORY_SIZE 32768
 using namespace std;
@@ -155,9 +156,12 @@ void execute_code(std::string codefile)
 		//PC+=3;	
 	}
 	std::cout << "MEMORY: " << endl << "------------------------------------------------------------------------------------------" << endl;
-	for (int i=start; i<start+code_size+5; i++) cout << (int)memory[i] << " ";
+	for (int i=start; i<start+code_size; i++) 
+	{
+		cout << std::setw(4) << std::setfill('0') << std::hex << i << " - " << std::setw(4) << std::setfill('0') << std::hex << (int)memory[i] << endl;
+	}
 	cout << endl;
 	cdf.close();
 	std::cout << endl << "REGISTER STATUS: " << endl << "---------------------------------------------" << endl;
-	std::cout << "ACCUMULATOR: " << ACC << endl << "INDEX REGISTER: " << X << endl << "L REGISTER: " << L << endl << "PROGRAM COUNTER:" << PC << endl;
+	std::cout << "ACCUMULATOR: " << std::dec << ACC << endl << "INDEX REGISTER: " << X << endl << "L REGISTER: " << L << endl << "PROGRAM COUNTER:" << PC << endl;
 }

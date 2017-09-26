@@ -10,6 +10,7 @@ DATE OF CREATION: 17 AUG 2017
 
 #include <vector>
 #include <map>
+#include <set>
 
 #ifndef __STRING_INCL__
 #define __STRING_INCL__
@@ -30,7 +31,7 @@ class assembler
 	int code_start, code, instr_end, main_end;
 	std::map <std::string, std::vector<int> > sym_tab ;
 	std::map <std::string, int> label_table;
-
+	std::set <std::string> labels, symbols;
 	void parse_file();
 	int get_data_location(std::string,std::string,std::string);
 	unsigned char *byte_format(std::string);

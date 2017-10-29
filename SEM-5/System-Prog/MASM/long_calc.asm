@@ -59,13 +59,31 @@ main proc
 	mov ax,dx
 	adc ax,cx
 	
+	;DISPLAY
 	call writenum
 	print endl
 	pop ax
 	call writenum
 	print endl
 	
+	pop dx
 	pop ax
+	
+	;SUB
+	push ax
+	push dx
+	
+	sub  ax,bx
+	push ax
+	mov ax,dx
+	sbb ax,cx
+	
+	;DISPLAY
+	call writenum
+	print endl
+	pop ax
+	call writenum
+	print endl
 	
 	
 	

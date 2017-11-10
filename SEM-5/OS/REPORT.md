@@ -29,13 +29,16 @@ while (true)
 
 Code for Consumer:
 
-`while (true)`
-`{
-  /* consume an item from out */`
-  `while (counter == 0); // loop until buffer has an item`
+```
+while (true)
+{
+    /* consume an item from out */
+    
+  ` while (counter == 0); // loop until buffer has an item`
   
-  `consumed_item = buffer[out];`
-  `in = (in+1)%BUFFER_SIZE;`
-  `counter--;`
-`}`
+    consumed_item = buffer[out];
+    in = (in+1)%BUFFER_SIZE;
+    counter--;
+}
+```
 `

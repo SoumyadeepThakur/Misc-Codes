@@ -12,27 +12,25 @@ A simple approach will be:
 
 Code for Producer:
 
-`
-while (true)
-{
-  /* produce an item at in */
-  while (counter == BUFFER_SIZE); // loop until buffer has space to add an item
+`while (true)`
+`{`
+  `/* produce an item at in */`
+  `while (counter == BUFFER_SIZE); // loop until buffer has space to add an item`
   
-  buffer[in] = item;
-  in = (in+1)%BUFFER_SIZE;
-  counter++;
-}
-`
+  `buffer[in] = item;`
+  `in = (in+1)%BUFFER_SIZE;`
+  `counter++;`
+`}`
+
 Code for Consumer:
 
-`
-while (true)
-{
-  /* consume an item from out */
-  while (counter == 0); // loop until buffer has an item
+`while (true)`
+`{
+  /* consume an item from out */`
+  `while (counter == 0); // loop until buffer has an item`
   
-  consumed_item = buffer[out];
-  in = (in+1)%BUFFER_SIZE;
-  counter--;
-}
+  `consumed_item = buffer[out];`
+  `in = (in+1)%BUFFER_SIZE;`
+  `counter--;`
+`}`
 `

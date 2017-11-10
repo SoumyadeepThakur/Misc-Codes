@@ -13,13 +13,20 @@ A simple approach will be:
 Code for Producer:
 
 `while (true)`
+
 `{`
+
   `/* produce an item at in */`
+  
   `while (counter == BUFFER_SIZE); // loop until buffer has space to add an item`
   
+  
   `buffer[in] = item;`
+  
   `in = (in+1)%BUFFER_SIZE;`
+  
   `counter++;`
+  
 `}`
 
 Code for Consumer:

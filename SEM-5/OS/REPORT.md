@@ -8,7 +8,6 @@ The **producer consumer** problem also known as the **bounded buffer problem** i
 
 Let us assume that the fixed size buffer acts like a queue, i.e., the producer produces at one end `in` of the queue and the consumer consumes from the other end `out`.
 
-A simple approach will be:
 
 Code for Producer:
 
@@ -41,6 +40,8 @@ while (true)
     counter--;
 }
 ```
+
+Variable names are self explanatory.
 
 Although the producer and consumer routines shown above are correct seperately, they may not function correctly when executed concurrently. This is because, the buffer `buffer` and the variable `counter` are shared between the 2 processes and there 
 
@@ -121,23 +122,22 @@ sem_t *semaph = sem_open ("Sem", O_CREAT | O_EXCL, 0644, 1);
 The problems with the naive implementation of the Producer-Consumer problem was discussed earlier. It can be solved using semaphores. The producer and consumer processes need to share to following:
 
 ```
-    int n;
     buffer[BUF_SIZE];
-    semaphore mutex = 1, empty = n, full = 0;
+    semaphore mutex = 1, empty = BUF_SIZE, full = 0;
 ```
 The `empty` and `full` semaphores count the number of empty and full slots in the buffer, and `mutex` is for ensuring mutual exclusion for access to the shared buffer
 
-| Structure of producer process: | Structure of consumer process: |
-|:-------------------------------|------------------------------- |
-| ```                            |```                             |
-| do                             |do                              |
-| {                              |{                               |
-|     wait(empty);               |    wait(full);                 |
-|     wait(mutex);               |    wait(mutex);                |
-|     . . .                      |    . . .                       |
-|     /* add item to buffer */   |    /* remove from buffer */    |
-|     . . .                      |    . . .                       |
-|     signal(mutex);             |    signal(mutex);              |
-|     signal(full);              |    signal(empty);              |
-| }                              |}                               |
-| ```                            |```                             |
+Structure of producer process:               Structure of consumer process: 
+
+```                                         |                             
+do                                          |do                              
+{                                           |{                               
+    wait(empty);                            |    wait(full);                 
+    wait(mutex);                            |    wait(mutex);                
+    . . .                                   |    . . .                       
+    /* add item to buffer */                |    /* remove from buffer */    
+    . . .                                   |    . . .                       
+    signal(mutex);                          |    signal(mutex);              
+    signal(full);                           |    signal(empty);              
+}                                           |}                               
+```                                                                      

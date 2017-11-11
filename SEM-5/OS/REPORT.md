@@ -99,8 +99,11 @@ signal(semaphore *S)
     S->value++;
     if (S->value <= 0)
     {
-        process p = remove_from_list(S->list);
-        wakeup(p);  // bring the process to ready queue 
+        if (S->list) // if some process is waiting
+        {
+            process p = remove_from_list(S->list);
+            wakeup(p);  // bring the process to ready queue 
+        }
     }
 }
 ```
@@ -125,19 +128,53 @@ The problems with the naive implementation of the Producer-Consumer problem was 
     buffer[BUF_SIZE];
     semaphore mutex = 1, empty = BUF_SIZE, full = 0;
 ```
-The `empty` and `full` semaphores count the number of empty and full slots in the buffer, and `mutex` is for ensuring mutual exclusion for access to the shared buffer
+The `empty` and `full` semaphores count the number of empty and full slots in the buffer, and `mutex` is for ensuring mutual exclusion for access to the shared buffer.
 
-Structure of producer process:               Structure of consumer process: 
+Structure of producer process: 
 
-```                                         |                             
-do                                          |do                              
-{                                           |{                               
-    wait(empty);                            |    wait(full);                 
-    wait(mutex);                            |    wait(mutex);                
-    . . .                                   |    . . .                       
-    /* add item to buffer */                |    /* remove from buffer */    
-    . . .                                   |    . . .                       
-    signal(mutex);                          |    signal(mutex);              
-    signal(full);                           |    signal(empty);              
-}                                           |}                               
-```                                                                      
+```                            
+do                             
+{                              
+    wait(empty);               
+    wait(mutex);               
+    . . .                      
+    /* add item to buffer */   
+    . . .                      
+    signal(mutex);             
+    signal(full);              
+}                              
+```                             
+
+Structure of consumer process:
+
+```                            
+do                             
+{                              
+    wait(full);               
+    wait(mutex);               
+    . . .                      
+    /* remove item from buffer */   
+    . . .                      
+    signal(mutex);             
+    signal(empty);              
+}                              
+```
+
+As we can see, the consumer must wait until `full` is positive, which is only possible if the producer has produced some item on the buffer and made a `signal()` call. Similarly the producer must wait till the buffer is not full.
+
+## p-Producer c-Consumer Problem
+
+Let us consider a situation where there are p producers and c consumers, sharing a circular buffer that can hold 25. Each of the producer processes stores the numbers 1 to 60 in the buffer one by one and then exits. Each of the consumer processes reads the numbers from the buffer and adds them to a shared variable TOTAL (initialized to 0). Though any consumer process can read any of the numbers in the buffer, the only constraint is every number written by some producer should be read exactly once by exactly one of the consumers. 
+
+This is an extension to the **Producer Consumer Problem** described above.
+
+## Implementation
+
+We assume that a consumer process goes on consuming an item from the buffer until all producers have left and the buffer is empty.
+
+We create a shared variable `buffer` which stores the actual buffer of items, along with 4 other variables. If the size of the item buffer is BUF_SIZE (which is 25), then our definition of buffer is `int buffer[BUF_SIZE+4]` where:
+
+    - buffer[0] = The sum TOTAL calculated by the consumer processes
+    - buffer[1] = Producer end of the circular buffer
+    - buffer[2] = Consumer head of the circular buffer
+    - buffer[3] = A special variable which is set only when a consumer exits, marking that the buffer is empty and no producers are present

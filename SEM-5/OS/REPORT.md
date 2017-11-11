@@ -1,10 +1,10 @@
 # Producer Consumer Problem using Semaphores
 
-## Overview:
+## 1. Overview:
 
 The **producer consumer** problem also known as the **bounded buffer problem** is a classic example of a multi-process synchronization problem. The problem invloves two processes, the producer and the consumer. Both these processes share a common, fixed-size buffer. The producer's job is to "produce", i.e., generate data, put it into the buffer and start again. At the same time, the consumer is "consuming", i.e., removing data from the buffer one at a time. The problem is to make sure that the producer won't try to add data into the buffer if it's full and that the consumer won't try to remove data from an empty buffer.
 
-## A Simple Approach:
+## 2. A Simple Approach:
 
 Let us assume that the fixed size buffer acts like a queue, i.e., the producer produces at one end `in` of the queue and the consumer consumes from the other end `out`.
 
@@ -45,7 +45,7 @@ Variable names are self explanatory.
 
 Although the producer and consumer routines shown above are correct seperately, they may not function correctly when executed concurrently. This is because, the buffer `buffer` and the variable `counter` are shared between the 2 processes and there 
 
-## Semaphores
+## 3. Semaphores
 
 Semaphores are synchronization tools which can be used to synchronize access to common resources by multiple processes in a concurrent system.
 
@@ -120,7 +120,7 @@ sem_t *semaph = sem_open ("Sem", O_CREAT | O_EXCL, 0644, 1);
 `sem_wait()` performs the wait operation on the semaphore and `sem_post()` performs the signal operation.
 
 
-## The Producer Consumer Problem using Semaphores
+## 4. The Producer Consumer Problem using Semaphores
 
 The problems with the naive implementation of the Producer-Consumer problem was discussed earlier. It can be solved using semaphores. The producer and consumer processes need to share to following:
 
@@ -162,19 +162,119 @@ do
 
 As we can see, the consumer must wait until `full` is positive, which is only possible if the producer has produced some item on the buffer and made a `signal()` call. Similarly the producer must wait till the buffer is not full.
 
-## p-Producer c-Consumer Problem
+## 5. p-Producer c-Consumer Problem
 
 Let us consider a situation where there are p producers and c consumers, sharing a circular buffer that can hold 25. Each of the producer processes stores the numbers 1 to 60 in the buffer one by one and then exits. Each of the consumer processes reads the numbers from the buffer and adds them to a shared variable TOTAL (initialized to 0). Though any consumer process can read any of the numbers in the buffer, the only constraint is every number written by some producer should be read exactly once by exactly one of the consumers. 
 
 This is an extension to the **Producer Consumer Problem** described above.
 
-## Implementation
+## 6. Implementation
 
 We assume that a consumer process goes on consuming an item from the buffer until all producers have left and the buffer is empty.
 
 We create a shared variable `buffer` which stores the actual buffer of items, along with 4 other variables. If the size of the item buffer is BUF_SIZE (which is 25), then our definition of buffer is `int buffer[BUF_SIZE+4]` where:
 
- * buffer[0] = The sum TOTAL calculated by the consumer processes
- * buffer[1] = Producer end of the circular buffer
- * buffer[2] = Consumer head of the circular buffer
- * buffer[3] = A special variable which is set only when a consumer exits, marking that the buffer is empty and no producers are present
+ * `buffer[0]` = The sum TOTAL calculated by the consumer processes
+ * `buffer[1]` = Producer end of the circular buffer
+ * `buffer[2]` = Consumer head of the circular buffer
+ * `buffer[3]` = A special variable which is set only when a consumer exits, marking that the buffer is empty and no producers are present
+
+This shared memory is allocated in the parent process, which then forks p producer processes and c consumer processes, p and c are taken as input from the user.
+
+We use 4 semaphores for our implementation `empty`, `full`, `mutex` and `prod`. The first 3 have the same usage as described in Section 4. Apart from them, we use a semaphore `prod` which is inialized to `p`. Every time a producer exits, the value of `prod` is reduced. It is to check whether all producers have exited.
+
+**The main function :**
+```
+int main(int argc, char const *argv[])
+{
+    pid_t pid;
+    int i, j, no_prod, no_cons, shmid, *buffer;
+    key_t shmkey;
+    sem_t *full, *empty, *mutex, *prod;
+    printf ("Enter no of producers and consumers: \n");
+    scanf ("%d %d",&no_prod, &no_cons);
+
+    //shared memory 
+    shmkey = ftok ("/dev/null", 5);       /* valid directory name and a number */
+    printf ("shmkey for p = %d\n", shmkey);
+    shmid = shmget (shmkey, (BUF_SIZE+4)*sizeof (int), 0644 | IPC_CREAT);
+    if (shmid < 0)
+    {                           
+        perror ("shmget\n");
+        exit (1);
+    }
+
+    buffer = (int *) shmat (shmid, NULL, 0);   /* attach p to shared memory */
+    for (i=0; i<(BUF_SIZE+4); i++) buffer[i] = 0;
+    buffer[1] = buffer[2] = 4;
+    printf ("buffer=%d is allocated in shared memory.\n\n", *buffer);
+    
+    empty = sem_open ("eSem", O_CREAT | O_EXCL, 0644, BUF_SIZE);     
+    full = sem_open ("fSem", O_CREAT | O_EXCL, 0644, 0);     
+    mutex = sem_open ("mSem", O_CREAT | O_EXCL, 0644, 1);     
+    prod = sem_open("pSem", O_CREAT | O_EXCL, 0644, no_prod);
+
+    //fork producers and consumers
+    for (i=0; i<(no_prod+no_cons); i++)
+    {
+        pid = fork();
+        if (pid < 0)
+        {
+            sem_unlink("eSem");
+            sem_close(empty);
+            sem_unlink("fSem");
+            sem_close(full);
+            sem_unlink("mSem");
+            sem_close(mutex);
+            sem_unlink("pSem");
+            sem_close(prod);
+            printf("Error forking\n");
+
+        }
+
+        else if (pid == 0) break;
+    }
+
+    if (pid != 0)
+    {
+        while (pid = waitpid (-1, NULL, 0))
+        {
+            if (errno == ECHILD)
+                break;
+        }
+        printf ("\nParent: All children have exited.\n");
+        printf ("Total: %d\n ", buffer[0]);
+        shmdt (buffer);
+        shmctl (shmid, IPC_RMID, 0);
+
+        printf ("Shared memory detached\n");
+
+        sem_unlink("eSem");
+        sem_close(empty);
+        sem_unlink("fSem");
+        sem_close(full);
+        sem_unlink("mSem");
+        sem_close(mutex);
+        sem_unlink("pSem");
+        sem_close(prod);
+        //sem_unlink("xSem");
+        //sem_close(exits);
+        exit(0);
+    }
+    else
+    {
+        if (i < no_prod)
+        {   
+            producer_main(buffer, empty, full, mutex, prod); //spawn producer
+        }
+        else
+        {
+            consumer_main(buffer, empty, full, mutex, prod); //spawn consumer
+        }
+        exit(0);
+    }
+
+    return 0;
+}
+```
+

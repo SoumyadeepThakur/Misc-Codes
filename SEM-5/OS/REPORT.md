@@ -69,5 +69,75 @@ signal(S)
 
 Rather than engaging in busy waiting which wastes CPU time, a process can be sent to the waiting queue associated with the semaphore on which it needs to wait. Thus the process can **block** itself if it finds that the semaphore value is not positive.
 
-To implement semaphores like this, we need to implement it as:
-`
+To implement semaphores like this, we need to define a semaphore as:
+
+```
+typedef struct
+{
+    int value;
+    struct process *list;
+} semaphore;
+```
+Each semaphore has an integer value and a list of processes waiting on it. A `signal()` operation removes a process from the waiting list and places it in the ready queue, to be eventually scheduled by the scheduer. `A wait()` operation blocks a process if the value is not positive, and adds it to the list of processes. These operations are defined as follows:
+
+```
+wait(semaphore *S)
+{
+    S->value --;
+    if (S->value < 0)
+    {
+        add_to_list(S->list,this_process);
+        block(); // sends the process to waiting state
+    } 
+}
+```
+
+```
+signal(semaphore *S)
+{
+    S->value++;
+    if (S->value <= 0)
+    {
+        process p = remove_from_list(S->list);
+        wakeup(p);  // bring the process to ready queue 
+    }
+}
+```
+
+POSIX semaphores can be created using `sem_open()` or the `sem_init()` functions. `sem_open()` creates a named semaphore, and a semaphore thus created in a process is shared among all child processes of that parent. `sem_init()` creates an unnamned semaphore and needs to be located in a region of shared memory if used among between parent and chlidren processes.
+
+```
+/* create a semaphore with name "Sema" and initial value 1
+    0644 defines the permission placed on the semaphore, rw-r--r-- in this case */
+
+sem_t *semaph = sem_open ("Sem", O_CREAT | O_EXCL, 0644, 1); 
+```
+
+`sem_wait()` performs the wait operation on the semaphore and `sem_post()` performs the signal operation.
+
+
+## The Producer Consumer Problem using Semaphores
+
+The problems with the naive implementation of the Producer-Consumer problem was discussed earlier. It can be solved using semaphores. The producer and consumer processes need to share to following:
+
+```
+    int n;
+    buffer[BUF_SIZE];
+    semaphore mutex = 1, empty = n, full = 0;
+```
+The `empty` and `full` semaphores count the number of empty and full slots in the buffer, and `mutex` is for ensuring mutual exclusion for access to the shared buffer
+
+| Structure of producer process: | Structure of consumer process: |
+|:-------------------------------|------------------------------- |
+| ```                            |```                             |
+| do                             |do                              |
+| {                              |{                               |
+|     wait(empty);               |    wait(full);                 |
+|     wait(mutex);               |    wait(mutex);                |
+|     . . .                      |    . . .                       |
+|     /* add item to buffer */   |    /* remove from buffer */    |
+|     . . .                      |    . . .                       |
+|     signal(mutex);             |    signal(mutex);              |
+|     signal(full);              |    signal(empty);              |
+| }                              |}                               |
+| ```                            |```                             |

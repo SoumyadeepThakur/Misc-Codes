@@ -174,7 +174,7 @@ We assume that a consumer process goes on consuming an item from the buffer unti
 
 We create a shared variable `buffer` which stores the actual buffer of items, along with 4 other variables. If the size of the item buffer is BUF_SIZE (which is 25), then our definition of buffer is `int buffer[BUF_SIZE+4]` where:
 
-    - buffer[0] = The sum TOTAL calculated by the consumer processes
-    - buffer[1] = Producer end of the circular buffer
-    - buffer[2] = Consumer head of the circular buffer
-    - buffer[3] = A special variable which is set only when a consumer exits, marking that the buffer is empty and no producers are present
+ * buffer[0] = The sum TOTAL calculated by the consumer processes
+ * buffer[1] = Producer end of the circular buffer
+ * buffer[2] = Consumer head of the circular buffer
+ * buffer[3] = A special variable which is set only when a consumer exits, marking that the buffer is empty and no producers are present

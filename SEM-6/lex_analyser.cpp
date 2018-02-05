@@ -58,7 +58,6 @@ int get_token_type(std::string token)
 {
 	
 }
-
 void tokenize(std::vector<std::string>& tokens, std::string& line)
 {
 	std::string delimiter = " +-*/<>=;,(){}";
@@ -70,12 +69,16 @@ void tokenize(std::vector<std::string>& tokens, std::string& line)
 		if (delimiter.find(c) != std::string::npos) // c is a delimeter
 		{
 			//tokens.push_back(line.substr(last, len));
-			cout << "Delim: " << c << endl;
-			tokens.push_back((""+c));
+			//cout << "Delim: " << c << endl;
 			if (len)
 			{
-				cout << line.substr(last, len) << endl;
+				//cout << "Token: " << line.substr(last, len) << endl;
 				tokens.push_back(line.substr(last, len));
+			}
+			if (c!=' ') 
+			{
+				//cout << "delim pushed" << endl;
+				tokens.push_back(std::string(1,c));
 			}
 			last = i+1;
 			len=0;
@@ -85,28 +88,46 @@ void tokenize(std::vector<std::string>& tokens, std::string& line)
 			len++;
 		}
 	}
+	for (std::string& s : tokens)
+		cout << s << ",";
+	cout << endl;
 }
 void process_code(std::string code_file_name)
 {
-	std::ifstream code_file(code_file_name, std::ifstream::in);
+	std::fstream code_file(code_file_name, ios::in);
 	std::string code_line;
 	std::vector<string> tokens;
-	while (code_file.eof())
+	cout << "Hi" << endl;
+	//code_file >> code_line;
+	//cout << code_line;
+	while (!code_file.eof())
 	{
-		code_file >> code_line;
+		std::string tokentype;
+		getline(code_file, code_line);
+		cout << code_line << endl;
 		tokenize(tokens, code_line);
+		for (std::string& token : tokens)
+		{
+			tokentype = get_token_type(token);
+			// add token to table
+			//token_entry t_ent(tokentype, token, )
+
+		}
+		std::vector<std::string>().swap(tokens); // free vector memory
 	}
 }
 int main(int argc, char const **argv)
 {
+	process_code("code.txt");
 	// vector<xyz>().swap(myvector) to clear myvector
-	std::vector<std::string> tokens;
-	std::string line;
+	//std::vector<std::string> tokens;
+	//std::string line;
 	//cin >> line;
-	getline(cin, line);
-	cout << line << endl;
-	tokenize(tokens, line);
-	for (std::string& s : tokens)
-		cout << s << endl;
+	//getline(cin, line);
+	//cout << line << endl;
+	//tokenize(tokens, line);
+	//for (std::string& s : tokens)
+	//	cout << s << ",";
+	//cout << endl;
 	return 0;
 }

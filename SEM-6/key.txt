@@ -1,9 +1,0 @@
-if
-else
-for
-while
-int
-float
-char
-void
-return

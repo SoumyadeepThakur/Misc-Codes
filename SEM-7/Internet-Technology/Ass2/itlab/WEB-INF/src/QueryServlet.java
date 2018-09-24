@@ -15,23 +15,33 @@ import org.bson.Document;
 
 class QueryHandler
 {
-    private static MongoClient mongo;
-    private static MongoCredential credential;
-    private static MongoDatabase database;
-    private static DB db;
-    private static void initDB()
+    private MongoClient mongo;
+    private MongoCredential credential;
+    private MongoDatabase database;
+    private DB db;
+    private String serverIp, dbName, collectionName;
+    private int port; 
+    //private static void initDB()
+    public QueryHandler(String ip, int port, String dbName, String collName)
+    {
+        this.serverIp = ip;
+        this.port = port;
+        this.dbName = dbName;
+        this.collectionName = collName;
+    }
+    public void initDB()
     {
         // Creating a Mongo client 
-        mongo = new MongoClient( "localhost" , 27017 ); 
+        mongo = new MongoClient(serverIp , port); 
    
         // Creating Credentials 
-        credential = MongoCredential.createCredential("sthakur", "itDb", 
+        credential = MongoCredential.createCredential("sthakur", dbName, 
         "cleopatra7".toCharArray()); 
         System.out.println("Connected to the database successfully");  
       
         // Accessing the database 
         //database = mongo.getDatabase("itDb"); 
-        db = mongo.getDB("itDb");
+        db = mongo.getDB(dbName);
         System.out.println("Credentials ::"+ credential);
 
 
@@ -40,9 +50,10 @@ class QueryHandler
     }
 
 
-    public static String executeQuery(String query, String clientIP)
+    //public static String executeQuery(String query, String clientIP)
+    public String executeQuery(String query, String clientIP)
     {
-        initDB();
+        //initDB();
         System.out.println ("QUERY ::::");
         System.out.println (query);
         String params[] = query.split(" ");
@@ -51,7 +62,7 @@ class QueryHandler
         System.out.println();
         String queryType = params[0];
         //MongoCollection<Document> collection = database.getCollection("user_query");
-        DBCollection collection = db.getCollection("user_query");
+        DBCollection collection = db.getCollection(collectionName);
         System.out.println("Collection selected successfully");
         if (queryType.equals("get")) //handle get request from user
         {
@@ -106,13 +117,29 @@ class QueryHandler
 }
  
 public class QueryServlet extends HttpServlet {
- 
+    
+    private QueryHandler queryHandler;
     @Override
-    public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+    public void init()
+    {
+        String dbName = getServletConfig().getInitParameter("db-name");
+        System.out.println("DB NAME::::" + dbName);
+        int portNo = Integer.parseInt(getServletConfig().getInitParameter("port"));
+        System.out.println("PORT::::" + portNo);
+        String serverIp = getServletConfig().getInitParameter("ip");
+        System.out.println("IP::::" + serverIp);
+        String collName = getServletConfig().getInitParameter("db-collection");
+        System.out.println("COLLECTION::::" + collName);
+        queryHandler = new QueryHandler(serverIp, portNo, dbName, collName);
+        queryHandler.initDB();
+    }
+
+    @Override
+    public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
       // Set the response message's MIME type
         response.setContentType("text/html; charset=UTF-8");
-        PrintWriter out = response.getWriter();
- 
+        //PrintWriter out = response.getWriter();
+        
       
         try 
         {
@@ -120,30 +147,33 @@ public class QueryServlet extends HttpServlet {
             if (ipAddress == null)
             {  
                 ipAddress = request.getRemoteAddr();  
-            } 
-            out.println("<!DOCTYPE html>");
-            out.println("<html><head>");
-            out.println("<meta http-equiv='Content-Type' content='text/html; charset=UTF-8'>");
-            out.println("<title>Query</title></head>");
-            out.println("<body>Client IP: ");
-            out.println("<p>"+ipAddress+"</p>");
-            out.println("<h2>Response:</h2>");
- 
+            }
+            
             String query = request.getParameter("querystring");
 
-            String result = QueryHandler.executeQuery(query, ipAddress);
-            out.println("<p>"+result+"</p>");
+            String result = queryHandler.executeQuery(query, ipAddress);
+            //out.println("<p>"+result+"</p>");
             //ConnectToDB.test();
          
             //out.println("<p>"+query+"</p>");
-            out.println("<a href='index.html'>BACK</a>");
+            //out.println("<a href='index.html'>BACK</a>");
 
-            out.println("</body></html>");
+            //out.println("</body></html>");
+            request.setAttribute("clientIP", ipAddress);
+            request.setAttribute("result", result);
+            RequestDispatcher requestDispatcher = request.getRequestDispatcher("view.jsp");
+            requestDispatcher.forward(request, response);
+
         }
         finally
         {
-            out.close();
+            //out.close();
         }
 		 
+   }
+   @Override
+   public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException
+   {
+        doPost(request, response);
    }
 }

@@ -6,19 +6,39 @@
  
   <!-- To save as <CATALINA_HOME>\webapps\helloservlet\WEB-INF\web.xml -->
  
- 
    <servlet>
       <servlet-name>QueryServletProduction</servlet-name>
       <servlet-class>QueryServlet</servlet-class>
+      <init-param>
+      	<param-name>email</param-name>
+      	<param-value>soumyadeep.thakur@gmail.com</param-value>
+      </init-param>
+      <init-param>
+      	<param-name>ip</param-name>
+      	<param-value>localhost</param-value>
+      </init-param>
+      <init-param>
+      	<param-name>port</param-name>
+      	<param-value>27017</param-value>
+      </init-param>
+      <init-param>
+      	<param-name>db-name</param-name>
+      	<param-value>itDb</param-value>
+      </init-param>
+      <init-param>
+      	<param-name>db-collection</param-name>
+      	<param-value>user_query</param-value>
+      </init-param>
    </servlet>
  
    <!-- Note: All <servlet> elements MUST be grouped together and
          placed IN FRONT of the <servlet-mapping> elements -->
  
    
- 
+ 	
    <servlet-mapping>
       <servlet-name>QueryServletProduction</servlet-name>
       <url-pattern>/request</url-pattern>
    </servlet-mapping>
+
 </web-app>

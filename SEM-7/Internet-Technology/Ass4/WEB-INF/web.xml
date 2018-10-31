@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<web-app version="3.0"
+	xmlns="http://java.sun.com/xml/ns/javaee"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd">
+
+	<servlet>
+		<servlet-name>Authentication</servlet-name>
+		<servlet-class>AuthServlet</servlet-class>
+		<init-param>
+			<param-name>email</param-name>
+			<param-value>soumyadeep.thakur@gmail.com</param-value>
+		</init-param>
+		<init-param>
+			<param-name>ip</param-name>
+			<param-value>localhost</param-value>
+		</init-param>
+		<init-param>
+			<param-name>port</param-name>
+			<param-value>27017</param-value>
+		</init-param>
+		<init-param>
+			<param-name>db-name</param-name>
+			<param-value>apparel</param-value>
+		</init-param>
+		<init-param>
+			<param-name>db-collection</param-name>
+			<param-value>customer</param-value>
+		</init-param>
+	</servlet>
+
+	<servlet-mapping>
+		<servlet-name>Authentication</servlet-name>
+		<url-pattern>/auth</url-pattern>
+	</servlet-mapping>
+
+
+</web-app>
